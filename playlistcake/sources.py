@@ -102,6 +102,15 @@ def artists_albums(artists, album_type='album'):
         yield from several_albums(chunk)
 
 
+def artists_top_tracks(artists):
+    s = get_spotify()
+    country = user_country()
+    for artist in artists:
+        aid = _get_id(artist)
+        yield from s.artist_top_tracks(
+            aid, country=country)['tracks']
+
+
 def saved_albums(max_results=None, album_only=False):
     """
     Yields saved album objects.
