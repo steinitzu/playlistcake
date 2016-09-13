@@ -68,9 +68,10 @@ def several_tracks(tracks):
         yield from s.tracks(tids)['tracks']
 
 
-def several_audio_features(tracks):
+def with_audio_features(tracks):
     """
-    Get audio features for given tracks
+    Yields the given tracks with
+    audio_features (track['audio_features'])
     """
     s = get_spotify()
     for chunk in iter_chunked(tracks, 100):
@@ -135,7 +136,7 @@ def tracks_from_albums(albums):
     for album in albums:
         if len(chunk) == 50:
             yield from several_tracks(chunk)
-            del chunk[:]
+            chunk = []
         for track in album['tracks']['items']:
             chunk.append(track)
     if chunk:
@@ -182,14 +183,14 @@ def items_to_seeds(objects, seed_size=5):
         chunk.append(iid)
         if len(chunk) == seed_size:
             yield chunk
-            chunk.clear()
+            chunk = []
     if chunk:
         yield chunk
 
 
-def recommendations(seed_artists=[],
-                    seed_tracks=[],
-                    seed_genres=[],
+def recommendations(seed_artists=(),
+                    seed_tracks=(),
+                    seed_genres=(),
                     max_results=50,
                     **tuneables):
     limit = _get_limit(max_results, 50)
@@ -202,6 +203,57 @@ def recommendations(seed_artists=[],
         max_results=max_results,
         limit=limit,
         **tuneables)
+
+
+def batch_recommendations(seed_gen=(),
+                          seed_gen_type='artist',
+                          suppl_artists=(),
+                          suppl_tracks=(),
+                          seed_genres=(),
+                          max_results=None,
+                          max_per_seed=50,
+                          **tuneables):
+    """
+    Provided a seed generator object (like the
+    one returned by `items_to_seeds`, yields
+    recommendations based on those seeds + any
+    static seeds provided (artists/tracks/genres)
+
+    seed_gen: A seed generator (like returned by `items to seeds`)
+    seed_gen_type: The type of seeds yielded by seed_gen (
+                   'artist' or 'track')
+    suppl_artists: list of artist ids to supplement each
+                  iteration of seed_gen
+    suppl_tracks: list of track ids to supplement each
+                  iteration of seed_ge
+    seed_genres: list of genres to supplement each
+                  iteration of seed_gen
+    max_results: total maximum results
+    limit: max number of tracks per seed_gen iteration
+    **tuneables: any number of tuneable audio attributes
+    """
+    if seed_gen_type not in ('artist', 'track'):
+        raise ValueError('Invalid seed_gen_type, use "artist" or "track"')
+    result_count = 0
+    for seed in seed_gen:
+        seed_artists = []
+        seed_tracks = []
+        if seed_gen_type == 'artist':
+            seed_artists += seed
+        elif seed_gen_type == 'tracks':
+            seed_tracks += seed
+        seed_artists += _get_ids(suppl_artists)
+        seed_tracks += _get_ids(suppl_tracks)
+        for track in recommendations(
+                seed_artists=seed_artists,
+                seed_tracks=seed_tracks,
+                seed_genres=seed_genres,
+                max_results=max_per_seed,
+                **tuneables):
+            yield track
+            result_count += 1
+            if result_count >= max_per_seed:
+                return
 
 
 def _matches_tunables(track, **tuneables):
@@ -242,7 +294,7 @@ def _matches_tunables(track, **tuneables):
 
 
 def tracks_filter_tuneables(tracks, **tuneables):
-    for track in several_audio_features(tracks):
+    for track in with_audio_features(tracks):
         if _matches_tunables(track, **tuneables):
             yield track
 
@@ -293,7 +345,7 @@ def library_filter_added_at(items, start=datetime.utcnow(),
 
 
 def tracks_sort_by_audio_feature(tracks, sort_key, order='asc'):
-    tracks = several_audio_features(tracks)
+    tracks = with_audio_features(tracks)
     tracks = list(tracks)
     reverse = order == 'desc'
     tracks.sort(key=lambda k: k['audio_features'][sort_key], reverse=reverse)
@@ -302,7 +354,7 @@ def tracks_sort_by_audio_feature(tracks, sort_key, order='asc'):
 
 def items_sorted_by_attributes(items, sort_func, order='asc'):
     reverse = order == 'desc'
-    items = several_audio_features(items)
+    items = with_audio_features(items)
     items = sorted(items, key=sort_func, reverse=reverse)
     yield from items
     #tracks = list(tracks)
@@ -364,6 +416,32 @@ def find_album(artist, name):
     return full_album(items[0]) if items else None
 
 
+def find_track(artist, name):
+    q = 'artist:{} track:{}'.format(artist, name)
+    s = get_spotify()
+    result = s.search(q, limit=1, type='track', market=user_country())
+    items = result['tracks']['items']
+    return items[0] if items else None
+
+
 def user_country():
     s = get_spotify()
     return s.current_user()['country']
+
+
+def create_playlist(name='Generated playlist', public=True):
+    s = get_spotify()
+    return s.user_playlist_create(
+        s.me()['id'],
+        name,
+        public=public)
+
+
+def add_to_playlist(tracks, playlist):
+    s = get_spotify()
+    for chunk in iter_chunked(tracks, 50):
+        tids = _get_ids(chunk)
+        s.user_playlist_add_tracks(
+            playlist['owner']['id'],
+            playlist['id'],
+            tids)

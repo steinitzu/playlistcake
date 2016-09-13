@@ -1,10 +1,7 @@
-import os
-
 from flask import session, redirect, url_for, request
 
 from . import app
 from .spotifystuff import get_spotify_oauth
-from .generator import generate_playlist
 
 
 @app.route('/')
