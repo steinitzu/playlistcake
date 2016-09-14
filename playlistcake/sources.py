@@ -178,7 +178,7 @@ def batch_recommendations(seed_gen=(),
         seed_tracks = []
         if seed_gen_type == 'artist':
             seed_artists += seed
-        elif seed_gen_type == 'tracks':
+        elif seed_gen_type == 'track':
             seed_tracks += seed
         seed_artists += get_ids(suppl_artists)
         seed_tracks += get_ids(suppl_tracks)
