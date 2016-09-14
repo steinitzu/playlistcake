@@ -3,68 +3,20 @@ from datetime import datetime
 
 import isodate
 from .spotifystuff import get_spotify, iterate_results
-from .util import iter_chunked
-
-
-def _get_ids(objects):
-    l = [o['id'] if isinstance(o, dict) else o
-         for o in objects]
-    return l
-
-
-def _get_id(item):
-    return item['id'] if isinstance(item, dict) else item
-
-
-def _get_limit(max_results, max_limit):
-    if max_results and max_results < max_limit:
-        limit = max_results
-    else:
-        limit = max_limit
-    return limit
-
-
-def followed_artists(max_results=None):
-    limit = _get_limit(max_results, 50)
-    yield from iterate_results(
-        'current_user_followed_artists',
-        items_path=['artists', 'items'],
-        next_path=['artists', 'next'],
-        max_results=max_results,
-        limit=limit)
-
-
-def user_top_artists(time_range='medium_term',
-                     max_results=None):
-    limit = _get_limit(max_results, 50)
-    yield from iterate_results(
-        'current_user_top_artists',
-        time_range=time_range,
-        max_results=max_results,
-        limit=limit)
-
-
-def user_top_tracks(time_range='medium_term',
-                    max_results=None):
-    limit = _get_limit(max_results, 50)
-    yield from iterate_results(
-        'current_user_top_tracks',
-        time_range=time_range,
-        max_results=max_results,
-        limit=limit)
+from .util import iter_chunked, get_ids, get_id, get_limit
 
 
 def several_albums(albums):
     s = get_spotify()
     for chunk in iter_chunked(albums, 20):
-        aids = _get_ids(chunk)
+        aids = get_ids(chunk)
         yield from s.albums(aids)['albums']
 
 
 def several_tracks(tracks):
     s = get_spotify()
     for chunk in iter_chunked(tracks, 50):
-        tids = _get_ids(chunk)
+        tids = get_ids(chunk)
         yield from s.tracks(tids)['tracks']
 
 
@@ -75,7 +27,7 @@ def with_audio_features(tracks):
     """
     s = get_spotify()
     for chunk in iter_chunked(tracks, 100):
-        tids = _get_ids(chunk)
+        tids = get_ids(chunk)
         features = s.audio_features(tracks=tids)
         for i, item in enumerate(features):
             track = chunk[i]
@@ -106,38 +58,9 @@ def artists_top_tracks(artists):
     s = get_spotify()
     country = user_country()
     for artist in artists:
-        aid = _get_id(artist)
+        aid = get_id(artist)
         yield from s.artist_top_tracks(
             aid, country=country)['tracks']
-
-
-def saved_albums(max_results=None, album_only=False):
-    """
-    Yields saved album objects.
-    {'album' full album, 'added_at': timestamp}
-    If album_only==True, yield only album.
-    """
-    limit = _get_limit(max_results, 50)
-    for item in iterate_results(
-            'current_user_saved_albums',
-            max_results=max_results,
-            limit=limit):
-        if album_only:
-            yield item['album']
-        else:
-            yield item
-
-
-def saved_tracks(max_results=None, track_only=False):
-    limit = _get_limit(max_results, 50)
-    for item in iterate_results(
-            'current_user_saved_tracks',
-            max_results=max_results,
-            limit=limit):
-        if track_only:
-            yield item['track']
-        else:
-            yield item
 
 
 def tracks_from_albums(albums):
@@ -185,7 +108,7 @@ def items_to_seeds(objects, seed_size=5):
     been_used = set()
     chunk = []
     for item in objects:
-        iid = _get_id(item)
+        iid = get_id(item)
         if iid in been_used:
             continue
         been_used.add(iid)
@@ -202,7 +125,7 @@ def recommendations(seed_artists=(),
                     seed_genres=(),
                     max_results=50,
                     **tuneables):
-    limit = _get_limit(max_results, 50)
+    limit = get_limit(max_results, 50)
     yield from iterate_results(
         'recommendations',
         items_path='tracks',
@@ -251,8 +174,8 @@ def batch_recommendations(seed_gen=(),
             seed_artists += seed
         elif seed_gen_type == 'tracks':
             seed_tracks += seed
-        seed_artists += _get_ids(suppl_artists)
-        seed_tracks += _get_ids(suppl_tracks)
+        seed_artists += get_ids(suppl_artists)
+        seed_tracks += get_ids(suppl_tracks)
         for track in recommendations(
                 seed_artists=seed_artists,
                 seed_tracks=seed_tracks,
@@ -261,8 +184,8 @@ def batch_recommendations(seed_gen=(),
                 **tuneables):
             yield track
             result_count += 1
-            if result_count >= max_per_seed:
-                return
+        if max_results and result_count >= max_results:
+            return
 
 
 def _matches_tunables(track, **tuneables):
@@ -282,9 +205,13 @@ def _matches_tunables(track, **tuneables):
         'time_signature': 0,
         'valence': 0.1
         }
-    track = track['audio_features']
+    _track = track
     is_match = True
     for key, value in tuneables.items():
+        track = _track['audio_features']
+        if key.endswith('popularity'):
+            # Popularity is not under audio_features, but include it anyway
+            track = _track
         if key.startswith('min_'):
             key = key[len('min_'):]
             is_match = track[key] >= value
@@ -336,21 +263,6 @@ def tracks_filter_artist_variety(tracks, limit=1):
         else:
             track_count[aid] = 1
         yield track
-
-
-def library_filter_added_at(items, start=datetime.utcnow(),
-                            end=datetime.utcnow()):
-    for item in items:
-        added = isodate.parse_datetime(item['added_at'])
-        added = added.replace(tzinfo=None)
-
-        if start <= added <= end:
-            if 'track' in item:
-                yield item['track']
-            elif 'album' in item:
-                yield item['album']
-            else:
-                yield item
 
 
 def tracks_sort_by_audio_feature(tracks, sort_key, order='asc'):
@@ -449,7 +361,7 @@ def create_playlist(name='Generated playlist', public=True):
 def add_to_playlist(tracks, playlist):
     s = get_spotify()
     for chunk in iter_chunked(tracks, 50):
-        tids = _get_ids(chunk)
+        tids = get_ids(chunk)
         s.user_playlist_add_tracks(
             playlist['owner']['id'],
             playlist['id'],
