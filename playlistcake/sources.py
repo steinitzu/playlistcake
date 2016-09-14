@@ -4,6 +4,7 @@ from datetime import datetime
 import isodate
 from .spotifystuff import get_spotify, iterate_results
 from .util import iter_chunked, get_ids, get_id, get_limit
+from .util import reservoir_sample
 
 
 def several_albums(albums):
@@ -54,13 +55,18 @@ def artists_albums(artists, album_type='album'):
         yield from several_albums(chunk)
 
 
-def artists_top_tracks(artists):
+def artists_top_tracks(artists, max_per_artist=10):
+    """
+    Get top tracks from several artists.
+    If max_per_artist is set a random sample is used.
+    """
     s = get_spotify()
     country = user_country()
     for artist in artists:
         aid = get_id(artist)
-        yield from s.artist_top_tracks(
-            aid, country=country)['tracks']
+        yield from reservoir_sample(
+            s.artist_top_tracks(
+                aid, country=country)['tracks'], max_per_artist)
 
 
 def tracks_from_albums(albums):
