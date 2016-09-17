@@ -354,21 +354,3 @@ def find_track(artist, name):
 def user_country():
     s = get_spotify()
     return s.current_user()['country']
-
-
-def create_playlist(name='Generated playlist', public=True):
-    s = get_spotify()
-    return s.user_playlist_create(
-        s.me()['id'],
-        name,
-        public=public)
-
-
-def add_to_playlist(tracks, playlist):
-    s = get_spotify()
-    for chunk in iter_chunked(tracks, 50):
-        tids = get_ids(chunk)
-        s.user_playlist_add_tracks(
-            playlist['owner']['id'],
-            playlist['id'],
-            tids)
