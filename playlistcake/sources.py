@@ -2,6 +2,7 @@ from collections import OrderedDict
 from datetime import datetime
 
 import isodate
+from .trackutils import with_audio_features
 from .spotifystuff import get_spotify, iterate_results
 from .util import iter_chunked, get_ids, get_id, get_limit
 from .util import reservoir_sample

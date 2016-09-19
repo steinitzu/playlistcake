@@ -76,3 +76,8 @@ def tracks_filter_artist_variety(tracks, limit=1):
         else:
             track_count[aid] = 1
         yield track
+
+
+# TODO: Use partials
+# tracks original
+# pipedthrough(partial_filter(args), partial_blablah(args) ...)

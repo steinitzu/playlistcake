@@ -39,7 +39,7 @@ class ExtendedOAuth(SpotifyOAuth):
             if is_expired:
                 self.token_info = self._refresh_access_token(
                     self.token_info['refresh_token'])
-            return self.token_infon
+            return self.token_info
 
 
 def get_spotify_oauth():
