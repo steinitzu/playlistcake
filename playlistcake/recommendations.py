@@ -1,5 +1,6 @@
 from .spotifystuff import iterate_results
 from .util import get_id, get_ids, get_limit
+from .genutils import content
 
 
 def generate_seeds(objects, seed_size=5):
@@ -26,6 +27,7 @@ def generate_seeds(objects, seed_size=5):
         yield chunk
 
 
+@content('tracks')
 def recommendations(seed_artists=(),
                     seed_tracks=(),
                     seed_genres=(),
@@ -43,6 +45,7 @@ def recommendations(seed_artists=(),
         **tuneables)
 
 
+@content('tracks')
 def batch_recommendations(seed_gen=(),
                           seed_gen_type='artist',
                           suppl_artists=(),

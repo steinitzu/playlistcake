@@ -3,6 +3,7 @@ import isodate
 from .trackutils import with_audio_features
 from .util import iter_chunked
 from .sources import several_albums
+from .genutils import yields, content, parent_content
 
 
 def _matches_tunables(track, **tuneables):
@@ -46,6 +47,7 @@ def _matches_tunables(track, **tuneables):
     return is_match
 
 
+@parent_content()
 def tracks_filter_tuneables(tracks, invert=False, **tuneables):
     """
     Filter tracks by audio_features (**tuneables).
@@ -58,7 +60,7 @@ def tracks_filter_tuneables(tracks, invert=False, **tuneables):
             yield track
 
 
-def albums_filter_release_years(albums, start=1990, end=2000, invert=False):
+def _albums_filter_release_years(albums, start=1990, end=2000, invert=False):
     for album in albums:
         rdate = isodate.parse_date(album['release_date'])
         if start <= rdate.year <= end:
@@ -67,7 +69,7 @@ def albums_filter_release_years(albums, start=1990, end=2000, invert=False):
             yield album
 
 
-def tracks_filter_release_years(tracks, start=1990, end=2000, invert=False):
+def _tracks_filter_release_years(tracks, start=1990, end=2000, invert=False):
     """
     Assumes full track objects.
     """
@@ -83,7 +85,20 @@ def tracks_filter_release_years(tracks, start=1990, end=2000, invert=False):
                 yield album
 
 
-def tracks_filter_unique(tracks):
+@parent_content()
+def filter_release_years(items, start=1990, end=2000, invert=False):
+    ctype = yields(items)
+    if ctype == 'albums':
+        func = _albums_filter_release_years
+    elif ctype == 'tracks':
+        func = _tracks_filter_release_years
+    else:
+        raise ValueError('arg items must contain track or album objects.')
+    yield from func(items, start, end, invert)
+
+
+@parent_content()
+def filter_unique(tracks):
     """
     Filter that yields each unique item only once.
     """
@@ -95,6 +110,7 @@ def tracks_filter_unique(tracks):
         yield track
 
 
+@parent_content()
 def tracks_filter_artist_variety(tracks, limit=1):
     """
     Goes through the track stream and yields no more
@@ -111,8 +127,3 @@ def tracks_filter_artist_variety(tracks, limit=1):
         else:
             track_count[aid] = 1
         yield track
-
-
-# TODO: Use partials
-# tracks original
-# pipedthrough(partial_filter(args), partial_blablah(args) ...)
