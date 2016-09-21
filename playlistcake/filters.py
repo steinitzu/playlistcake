@@ -1,4 +1,8 @@
+import isodate
+
 from .trackutils import with_audio_features
+from .util import iter_chunked
+from .sources import several_albums
 
 
 def _matches_tunables(track, **tuneables):
@@ -31,7 +35,7 @@ def _matches_tunables(track, **tuneables):
         elif key.startswith('max_'):
             key = key[len('max_'):]
             is_match = track[key] <= value
-        elif key.startswith('target_'):
+        elif key.startswith('target_') or key in margins:
             key = key[len('target_'):]
             margin = margins[key]
             low = value - margin
@@ -42,10 +46,41 @@ def _matches_tunables(track, **tuneables):
     return is_match
 
 
-def tracks_filter_tuneables(tracks, **tuneables):
+def tracks_filter_tuneables(tracks, invert=False, **tuneables):
+    """
+    Filter tracks by audio_features (**tuneables).
+    Tuneables may be prefixed by min_/max_/target_
+    """
     for track in with_audio_features(tracks):
         if _matches_tunables(track, **tuneables):
             yield track
+        elif invert:
+            yield track
+
+
+def albums_filter_release_years(albums, start=1990, end=2000, invert=False):
+    for album in albums:
+        rdate = isodate.parse_date(album['release_date'])
+        if start <= rdate.year <= end:
+            yield album
+        elif invert:
+            yield album
+
+
+def tracks_filter_release_years(tracks, start=1990, end=2000, invert=False):
+    """
+    Assumes full track objects.
+    """
+
+    for chunk in iter_chunked(tracks, 20):
+        aids = [track['album']['id'] for track in chunk]
+        albums = several_albums(aids)
+        for i, album in enumerate(albums):
+            rdate = isodate.parse_date(album['release_date'])
+            if start <= rdate.year <= end:
+                yield chunk[i]
+            elif invert:
+                yield album
 
 
 def tracks_filter_unique(tracks):
