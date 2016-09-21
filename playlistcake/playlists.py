@@ -1,7 +1,9 @@
 from .spotifystuff import iterate_results, get_spotify
 from .util import get_limit, get_ids, iter_chunked
+from .genutils import content
 
 
+@content('playlists')
 def user_playlists(max_results=None):
     limit = get_limit(max_results, 50)
     s = get_spotify()
@@ -13,6 +15,7 @@ def user_playlists(max_results=None):
         max_results=max_results)
 
 
+@content('tracks')
 def playlists_tracks(playlists):
     """
     Given a list/generator of simplified playlist
