@@ -86,6 +86,11 @@ def tracks_from_albums(albums):
 
 
 @infer_content
+def alternate(*streams):
+    raise NotImplementedError
+
+
+@infer_content
 def items_sorted(items, sort_func, order='asc'):
     """
     Sorts the stream of items using given sort_func as key.

@@ -1,9 +1,9 @@
 from .spotifystuff import iterate_results
 from .util import get_id, get_ids, get_limit
-from .genutils import yields
+from .genutils import yields, content_type
 
 
-def generate_seeds(objects, seed_size=5):
+def _generate_seeds(objects, seed_size=5):
     """
     Convenience method to chunk iterables of artist or track
     object into lists of `seed_size` length of item ids.
@@ -45,12 +45,8 @@ def recommendations(seed_artists=(),
         **tuneables)
 
 
-# TODO: Use the content type to determine seed type
-
-
 @yields('tracks')
-def batch_recommendations(seed_gen=(),
-                          seed_gen_type='artist',
+def batch_recommendations(seed_gen=None, seed_size=5,
                           suppl_artists=(),
                           suppl_tracks=(),
                           seed_genres=(),
@@ -58,14 +54,13 @@ def batch_recommendations(seed_gen=(),
                           max_per_seed=50,
                           **tuneables):
     """
-    Provided a seed generator object (like the
-    one returned by `items_to_seeds`, yields
-    recommendations based on those seeds + any
-    static seeds provided (artists/tracks/genres)
+    Gets recommendations using artists or tracks from
+    a generator. Unique seeds are created from generator
+    by splitting it up into `seed_size` sized chunks.
 
-    seed_gen: A seed generator (like returned by `items to seeds`)
-    seed_gen_type: The type of seeds yielded by seed_gen (
-                   'artist' or 'track')
+    seed_gen: A generator with content_type of 'tracks' or 'artists'
+    seed_size: the number of items from seed_gen to use for
+               each iteration
     suppl_artists: list of artist ids to supplement each
                   iteration of seed_gen
     suppl_tracks: list of track ids to supplement each
@@ -76,24 +71,23 @@ def batch_recommendations(seed_gen=(),
     limit: max number of tracks per seed_gen iteration
     **tuneables: any number of tuneable audio attributes
     """
-    if seed_gen_type not in ('artist', 'track'):
-        raise ValueError('Invalid seed_gen_type, use "artist" or "track"')
+    seed_type = content_type(seed_gen)
     result_count = 0
-    for seed in seed_gen:
+    for seed in _generate_seeds(seed_gen, seed_size):
         seed_artists = []
         seed_tracks = []
-        if seed_gen_type == 'artist':
-            seed_artists += seed
-        elif seed_gen_type == 'track':
-            seed_tracks += seed
+        if seed_type == 'artists':
+            seed_artists += get_ids(seed)
+        elif seed_type == 'tracks':
+            seed_tracks += get_ids(seed)
         seed_artists += get_ids(suppl_artists)
         seed_tracks += get_ids(suppl_tracks)
-        for track in recommendations(
-                seed_artists=seed_artists,
-                seed_tracks=seed_tracks,
-                seed_genres=seed_genres,
-                max_results=max_per_seed,
-                **tuneables):
+        recs = recommendations(seed_artists=seed_artists,
+                               seed_tracks=seed_tracks,
+                               seed_genres=seed_genres,
+                               max_results=max_per_seed,
+                               **tuneables)
+        for track in recs:
             yield track
             result_count += 1
         if max_results and result_count >= max_results:

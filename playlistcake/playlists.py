@@ -1,6 +1,6 @@
 from .spotifystuff import iterate_results, get_spotify
 from .util import get_limit, get_ids, iter_chunked
-from .genutils import content
+from .genutils import yields
 
 
 @yields('playlists')
@@ -41,6 +41,8 @@ def create_playlist(name='Generated playlist', public=True):
 
 
 def add_to_playlist(tracks, playlist):
+    if isinstance(playlist, str):
+        playlist = create_playlist(playlist)
     s = get_spotify()
     for chunk in iter_chunked(tracks, 50):
         tids = get_ids(chunk)

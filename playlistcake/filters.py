@@ -1,8 +1,7 @@
 import isodate
 
-#from .trackutils import with_audio_features
 from .util import iter_chunked
-from .sources import several_albums
+from .sources import several_albums, with_audio_features
 from .genutils import content_type, infer_content
 
 
