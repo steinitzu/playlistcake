@@ -182,3 +182,19 @@ def test_filter_unique(some_tracks):
 
 def test_filter_audio_features(some_tracks):
     raise NotImplementedError
+
+
+def test_decorators():
+    from playlistcake import library, sources, filters
+    from playlistcake.genutils import content_type
+    artists = library.saved_artists()
+    albums = sources.artists_albums(artists)
+    tracks = sources.artists_top_tracks(artists, 1)
+    assert content_type(artists) == 'artists'
+    assert content_type(albums) == 'albums'
+    assert content_type(tracks) == 'tracks'
+
+    filtered = filters.filter_release_years(tracks)
+    assert content_type(filtered) == 'tracks'
+    filtered = filters.filter_release_years(albums)
+    assert content_type(filtered) == 'albums'

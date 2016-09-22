@@ -1,15 +1,11 @@
 import random
-from collections import OrderedDict
-from datetime import datetime
 
-import isodate
-
-from .spotifystuff import get_spotify, iterate_results
-from .util import get_id, get_ids, get_limit, iter_chunked, reservoir_sample
-from .genutils import content, parent_content
+from .spotifystuff import get_spotify
+from .util import get_id, get_ids, iter_chunked, reservoir_sample
+from .genutils import yields, infer_content
 
 
-@content('albums')
+@yields('albums')
 def several_albums(albums):
     s = get_spotify()
     for chunk in iter_chunked(albums, 20):
@@ -17,7 +13,7 @@ def several_albums(albums):
         yield from s.albums(aids)['albums']
 
 
-@content('tracks')
+@yields('tracks')
 def several_tracks(tracks):
     s = get_spotify()
     for chunk in iter_chunked(tracks, 50):
@@ -25,7 +21,7 @@ def several_tracks(tracks):
         yield from s.tracks(tids)['tracks']
 
 
-@content('tracks')
+@yields('tracks')
 def with_audio_features(tracks):
     """
     Yields the given tracks with
@@ -41,7 +37,7 @@ def with_audio_features(tracks):
             yield track
 
 
-@content('albums')
+@yields('albums')
 def artists_albums(artists, album_type='album'):
     """
     Get all albums from given artists.
@@ -61,7 +57,7 @@ def artists_albums(artists, album_type='album'):
         yield from several_albums(chunk)
 
 
-@content('tracks')
+@yields('tracks')
 def artists_top_tracks(artists, max_per_artist=10):
     """
     Get top tracks from several artists.
@@ -76,7 +72,7 @@ def artists_top_tracks(artists, max_per_artist=10):
                 aid, country=country)['tracks'], max_per_artist)
 
 
-@content('tracks')
+@yields('tracks')
 def tracks_from_albums(albums):
     chunk = []
     for album in albums:
@@ -89,7 +85,7 @@ def tracks_from_albums(albums):
         yield from several_tracks(chunk)
 
 
-@parent_content()
+@infer_content
 def items_sorted(items, sort_func, order='asc'):
     """
     Sorts the stream of items using given sort_func as key.
@@ -100,7 +96,7 @@ def items_sorted(items, sort_func, order='asc'):
     yield from items
 
 
-@parent_content()
+@infer_content
 def items_shuffled(items):
     """
     Shuffles the stream.

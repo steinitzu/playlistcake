@@ -5,7 +5,7 @@ import isodate
 
 from .util import get_limit
 from .spotifystuff import iterate_results
-from .genutils import content, parent_content
+from .genutils import yields, infer_content
 
 
 """
@@ -13,7 +13,7 @@ Methods dealing with the user library.
 """
 
 
-@content('albums')
+@yields('albums')
 def saved_albums(max_results=None, album_only=False):
     """
     Yields saved album objects.
@@ -31,7 +31,7 @@ def saved_albums(max_results=None, album_only=False):
             yield item
 
 
-@content('tracks')
+@yields('tracks')
 def saved_tracks(max_results=None, track_only=False):
     """
     Yields saved track objects.
@@ -49,7 +49,7 @@ def saved_tracks(max_results=None, track_only=False):
             yield item
 
 
-@content('artists')
+@yields('artists')
 def followed_artists(max_results=None):
     limit = get_limit(max_results, 50)
     yield from iterate_results(
@@ -60,7 +60,7 @@ def followed_artists(max_results=None):
         limit=limit)
 
 
-@content('artists')
+@yields('artists')
 def saved_artists(max_results=None):
     """
     Return all artists from saved_albums,
@@ -90,7 +90,7 @@ def saved_artists(max_results=None):
         yield artist
 
 
-@content('artists')
+@yields('artists')
 def user_top_artists(time_range='medium_term',
                      max_results=None):
     limit = get_limit(max_results, 50)
@@ -101,7 +101,7 @@ def user_top_artists(time_range='medium_term',
         limit=limit)
 
 
-@content('artists')
+@yields('artists')
 def user_top_tracks(time_range='medium_term',
                     max_results=None):
     limit = get_limit(max_results, 50)
@@ -112,7 +112,7 @@ def user_top_tracks(time_range='medium_term',
         limit=limit)
 
 
-@parent_content()
+@infer_content
 def library_filter_added_at(items, start=datetime.utcnow(),
                             end=datetime.utcnow()):
     for item in items:

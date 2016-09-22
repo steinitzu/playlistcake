@@ -1,9 +1,9 @@
 import isodate
 
-from .trackutils import with_audio_features
+#from .trackutils import with_audio_features
 from .util import iter_chunked
 from .sources import several_albums
-from .genutils import yields, content, parent_content
+from .genutils import content_type, infer_content
 
 
 def _matches_tunables(track, **tuneables):
@@ -47,7 +47,7 @@ def _matches_tunables(track, **tuneables):
     return is_match
 
 
-@parent_content()
+@infer_content
 def tracks_filter_tuneables(tracks, invert=False, **tuneables):
     """
     Filter tracks by audio_features (**tuneables).
@@ -73,7 +73,6 @@ def _tracks_filter_release_years(tracks, start=1990, end=2000, invert=False):
     """
     Assumes full track objects.
     """
-
     for chunk in iter_chunked(tracks, 20):
         aids = [track['album']['id'] for track in chunk]
         albums = several_albums(aids)
@@ -85,9 +84,9 @@ def _tracks_filter_release_years(tracks, start=1990, end=2000, invert=False):
                 yield album
 
 
-@parent_content()
+@infer_content
 def filter_release_years(items, start=1990, end=2000, invert=False):
-    ctype = yields(items)
+    ctype = content_type(items)
     if ctype == 'albums':
         func = _albums_filter_release_years
     elif ctype == 'tracks':
@@ -97,7 +96,7 @@ def filter_release_years(items, start=1990, end=2000, invert=False):
     yield from func(items, start, end, invert)
 
 
-@parent_content()
+@infer_content
 def filter_unique(tracks):
     """
     Filter that yields each unique item only once.
@@ -110,7 +109,7 @@ def filter_unique(tracks):
         yield track
 
 
-@parent_content()
+@infer_content
 def tracks_filter_artist_variety(tracks, limit=1):
     """
     Goes through the track stream and yields no more
