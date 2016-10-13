@@ -9,7 +9,7 @@ setup(
     url='',
     install_requires=[
         'isodate==0.5.4',
-        'requests==2.11.1'
+        'requests==2.11.1',
         'spotipy==2.3.8'],
     license='LICENSE.md',
     packages=['playlistcake'])
