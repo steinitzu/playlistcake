@@ -5,7 +5,6 @@ import base64
 from spotipy.oauth2 import SpotifyOAuth
 from spotipy import Spotify
 
-from . import app
 from . import sessionenv
 from .util import dict_get_nested
 
@@ -15,6 +14,22 @@ def _monkey_search(self, q, limit=10, offset=0, type='track', market=None):
                      q=q, limit=limit, offset=offset, type=type, market=market)
 
 Spotify.search = _monkey_search
+
+
+def set_client_credentials(client_id=None,
+                           client_secret=None,
+                           redirect_uri=None,
+                           scope=None):
+    """
+    Set the spotify credentials for the current
+    session.
+    These will be used to refresh tokens and such.
+    """
+    sessionenv.set('spotify_credentials',
+                   {'client_id': client_id,
+                    'client_secret': client_secret,
+                    'redirect_uri': redirect_uri,
+                    'scope': scope})
 
 
 def set_session_token(token):
@@ -47,30 +62,12 @@ class ExtendedOAuth(SpotifyOAuth):
             return self.token_info
 
 
-def get_spotify_oauth():
-    client_id = app.config['SPOTIFY_CLIENT_ID']
-    client_secret = app.config('SPOTIPY_CLIENT_SECRET')
-    redirect_uri = app.config('SPOTIPY_REDIRECT_URI')
-    auth = ExtendedOAuth(
-        client_id, client_secret, redirect_uri,
-        scope=app.config['SPOTIFY_AUTHORIZATION_SCOPE'])
-    return auth
-
-
 def token_is_expired(token):
     return token['expires_at'] < time.time()
 
 
 def token_is_almost_expired(token):
     return token['expires_at'] < time.time()+600
-
-
-def refresh_token(token):
-    if token_is_expired(token) or token_is_almost_expired(token):
-        auth = get_spotify_oauth()
-        return auth._refresh_access_token(token['refresh_token'])
-    else:
-        return token
 
 
 def get_spotify():
@@ -82,7 +79,8 @@ def get_spotify():
         sessj = None
     if not token:
         raise Exception('No spotify token, abort')
-    token = refresh_token(token)
+    token = refresh_token(token,
+                          **sessionenv.get('spotify_credentials'))
     s = sessionenv.get('spotify')
     if s:
         s._auth = token['access_token']
@@ -135,8 +133,7 @@ def get_authorize_url(client_id, client_secret, redirect_uri, scope):
     at redirect_uri.
     """
     auth = ExtendedOAuth(
-        client_id, client_secret, redirect_uri,
-        scope=app.config['SPOTIFY_AUTHORIZATION_SCOPE'])
+        client_id, client_secret, redirect_uri, scope)
     auth_url = auth.get_authorize_url()
     return auth_url
 
@@ -149,8 +146,17 @@ def redirect_handler(url, client_id, client_secret, redirect_uri, scope):
     Returns a spotify access token.
     """
     auth = ExtendedOAuth(
-        client_id, client_secret, redirect_uri,
-        scope=app.config['SPOTIFY_AUTHORIZATION_SCOPE'])
+        client_id, client_secret, redirect_uri, scope)
     code = auth.parse_response_code(url)
     token = auth.get_access_token(code)
     return token
+
+
+def refresh_token(token, client_id=None, client_secret=None,
+                  redirect_uri=None, scope=None):
+    if token_is_expired(token) or token_is_almost_expired(token):
+        auth = ExtendedOAuth(
+            client_id, client_secret, redirect_uri, scope)
+        return auth._refresh_access_token(token['refresh_token'])
+    else:
+        return token

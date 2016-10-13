@@ -9,4 +9,4 @@ def set(key, value):
 
 
 def get(key, default=None):
-    return session.get(key, default)
+    return session.data.get(key, default)
