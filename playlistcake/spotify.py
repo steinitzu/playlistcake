@@ -133,7 +133,7 @@ def get_authorize_url(client_id, client_secret, redirect_uri, scope):
     at redirect_uri.
     """
     auth = ExtendedOAuth(
-        client_id, client_secret, redirect_uri, scope)
+        client_id, client_secret, redirect_uri, scope=scope)
     auth_url = auth.get_authorize_url()
     return auth_url
 
@@ -146,7 +146,7 @@ def redirect_handler(url, client_id, client_secret, redirect_uri, scope):
     Returns a spotify access token.
     """
     auth = ExtendedOAuth(
-        client_id, client_secret, redirect_uri, scope)
+        client_id, client_secret, redirect_uri, scope=scope)
     code = auth.parse_response_code(url)
     token = auth.get_access_token(code)
     return token
@@ -156,7 +156,7 @@ def refresh_token(token, client_id=None, client_secret=None,
                   redirect_uri=None, scope=None):
     if token_is_expired(token) or token_is_almost_expired(token):
         auth = ExtendedOAuth(
-            client_id, client_secret, redirect_uri, scope)
+            client_id, client_secret, redirect_uri, scope=scope)
         return auth._refresh_access_token(token['refresh_token'])
     else:
         return token

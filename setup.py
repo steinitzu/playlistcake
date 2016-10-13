@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='playlistcake',
-    version='0.1.0.0',
+    version='0.1.0.1',
     description='Spotify playlist generation library',
     author="Steinthor Palsson",
     author_email="steini90@gmail.com",
