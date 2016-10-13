@@ -1,9 +1,12 @@
-SESSION = {}
+import threading
+
+session = threading.local()
+session.data = {}
 
 
 def set(key, value):
-    SESSION[key] = value
+    session.data[key] = value
 
 
 def get(key, default=None):
-    return SESSION.get(key, default)
+    return session.get(key, default)

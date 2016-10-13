@@ -1,4 +1,4 @@
-from .spotifystuff import iterate_results
+from .spotify import iterate_results
 from .util import get_id, get_ids, get_limit
 from .genutils import yields, content_type
 
@@ -92,3 +92,26 @@ def batch_recommendations(seed_gen=None, seed_size=5,
             result_count += 1
         if max_results and result_count >= max_results:
             return
+
+
+@yields('albums')
+def recommended_albums(seed_gen=None, seed_size=5,
+                       suppl_artists=(),
+                       suppl_tracks=(),
+                       seed_genres=(),
+                       max_results=None,
+                       **tuneables):
+    batch = batch_recommendations(
+        seed_gen, seed_size,
+        suppl_artists, suppl_tracks,
+        seed_genres,
+        **tuneables)
+    seen = set()
+    for track in batch:
+        if max_results and len(seen) >= max_results:
+            return
+        album = track['album']
+        if album['id'] in seen:
+            continue
+        seen.add(album['id'])
+        yield album

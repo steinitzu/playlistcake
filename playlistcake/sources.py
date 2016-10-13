@@ -1,6 +1,7 @@
 import random
+import itertools
 
-from .spotifystuff import get_spotify
+from .spotify import get_spotify
 from .util import get_id, get_ids, iter_chunked, reservoir_sample
 from .genutils import yields, infer_content
 
@@ -87,11 +88,15 @@ def tracks_from_albums(albums):
 
 @infer_content
 def alternate(*streams):
-    raise NotImplementedError
+    achain = itertools.chain(
+        *itertools.zip_longest(
+            *streams))
+    yield from itertools.filterfalse(
+        lambda x: x is None, achain)
 
 
 @infer_content
-def items_sorted(items, sort_func, order='asc'):
+def sort(items, sort_func, order='asc'):
     """
     Sorts the stream of items using given sort_func as key.
     """
@@ -102,7 +107,7 @@ def items_sorted(items, sort_func, order='asc'):
 
 
 @infer_content
-def items_shuffled(items):
+def shuffle(items):
     """
     Shuffles the stream.
     """

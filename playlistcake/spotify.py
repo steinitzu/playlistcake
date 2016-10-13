@@ -1,5 +1,6 @@
 import os
 import time
+import base64
 
 from spotipy.oauth2 import SpotifyOAuth
 from spotipy import Spotify
@@ -14,6 +15,10 @@ def _monkey_search(self, q, limit=10, offset=0, type='track', market=None):
                      q=q, limit=limit, offset=offset, type=type, market=market)
 
 Spotify.search = _monkey_search
+
+
+def set_session_token(token):
+    sessionenv.set('spotify_token', token)
 
 
 class ExtendedOAuth(SpotifyOAuth):
@@ -43,9 +48,9 @@ class ExtendedOAuth(SpotifyOAuth):
 
 
 def get_spotify_oauth():
-    client_id = os.getenv('SPOTIPY_CLIENT_ID')
-    client_secret = os.getenv('SPOTIPY_CLIENT_SECRET')
-    redirect_uri = os.getenv('SPOTIPY_REDIRECT_URI')
+    client_id = app.config['SPOTIFY_CLIENT_ID']
+    client_secret = app.config('SPOTIPY_CLIENT_SECRET')
+    redirect_uri = app.config('SPOTIPY_REDIRECT_URI')
     auth = ExtendedOAuth(
         client_id, client_secret, redirect_uri,
         scope=app.config['SPOTIFY_AUTHORIZATION_SCOPE'])
@@ -121,3 +126,31 @@ def iterate_results(endpoint, *args, **kwargs):
             result = s._get(next_url)
         else:
             return
+
+
+def get_authorize_url(client_id, client_secret, redirect_uri, scope):
+    """
+    Get a spotify oauth authorization url.
+    Redirect user here and read response
+    at redirect_uri.
+    """
+    auth = ExtendedOAuth(
+        client_id, client_secret, redirect_uri,
+        scope=app.config['SPOTIFY_AUTHORIZATION_SCOPE'])
+    auth_url = auth.get_authorize_url()
+    return auth_url
+
+
+def redirect_handler(url, client_id, client_secret, redirect_uri, scope):
+    """
+    Convenience redirect handler.
+    Provide the redirect url (containing auth code)
+    along with client credentials.
+    Returns a spotify access token.
+    """
+    auth = ExtendedOAuth(
+        client_id, client_secret, redirect_uri,
+        scope=app.config['SPOTIFY_AUTHORIZATION_SCOPE'])
+    code = auth.parse_response_code(url)
+    token = auth.get_access_token(code)
+    return token

@@ -4,7 +4,7 @@ import itertools
 import isodate
 
 from .util import get_limit
-from .spotifystuff import iterate_results
+from .spotify import iterate_results
 from .genutils import yields, infer_content
 
 

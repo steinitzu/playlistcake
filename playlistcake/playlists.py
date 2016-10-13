@@ -1,4 +1,4 @@
-from .spotifystuff import iterate_results, get_spotify
+from .spotify import iterate_results, get_spotify
 from .util import get_limit, get_ids, iter_chunked
 from .genutils import yields
 
